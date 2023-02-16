@@ -56,6 +56,23 @@ glm::vec3 lightPosition = glm::vec3(0.0f, 3.0f, 0.0f);
 
 bool wireFrame = false;
 
+struct Light
+{
+	glm::vec3 position;
+	glm::vec3 color;
+	float intensity;
+};
+
+struct Material
+{
+	glm::vec3 color;
+	float ambientK, diffuseK, specularK; // (0-1 range)
+	float shininess; // (0-512 range)
+};
+
+Light _Light;
+Material _Material;
+
 int main() {
 	if (!glfwInit()) {
 		printf("glfw failed to init");
@@ -156,6 +173,21 @@ int main() {
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
+
+
+		litShader.setVec3("_Light.position", _Light.position);
+		litShader.setVec3("_Light.color", _Light.color);
+		litShader.setFloat("_Light.intensity", _Light.intensity);
+
+		litShader.setVec3("_Material.color", _Material.color);
+		litShader.setFloat("_Material.ambientK", _Material.ambientK);
+		litShader.setFloat("_Material.diffuseK", _Material.diffuseK);
+		litShader.setFloat("_Material.specularK", _Material.specularK);
+		litShader.setFloat("_Material.shininess", _Material.shininess);
+
+		litShader.setVec3("_CameraPosition", camera.getPosition());
+
+
 		//Draw cube
 		litShader.setMat4("_Model", cubeTransform.getModelMatrix());
 		cubeMesh.draw();
@@ -181,10 +213,26 @@ int main() {
 		sphereMesh.draw();
 
 		//Draw UI
-		ImGui::Begin("Settings");
+		//ImGui::Begin("Settings");
 
-		ImGui::ColorEdit3("Light Color", &lightColor.r);
-		ImGui::DragFloat3("Light Position", &lightTransform.position.x);
+		//ImGui::ColorEdit3("Light Color", &lightColor.r);
+		//ImGui::DragFloat3("Light Position", &lightTransform.position.x);
+		//ImGui::End();
+
+		ImGui::Begin("Light");
+
+		ImGui::ColorEdit3("Light Color", &_Light.color.r);
+		ImGui::DragFloat3("Light Position", &_Light.position.x);
+		ImGui::DragFloat("Light Intensity", &_Light.intensity, 0.01, 0, 1);
+		ImGui::End();
+
+		ImGui::Begin("Material");
+
+		ImGui::ColorEdit3("Color", &_Material.color.r);
+		ImGui::DragFloat("Ambient", &_Material.ambientK, 0.01, 0, 1);
+		ImGui::DragFloat("Diffuse", &_Material.diffuseK, 0.01, 0, 1);
+		ImGui::DragFloat("Specular", &_Material.specularK, 0.01, 0, 1);
+		ImGui::DragFloat("Shininess", &_Material.shininess, 1, 0, 512);
 		ImGui::End();
 
 		ImGui::Render();
