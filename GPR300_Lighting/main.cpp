@@ -67,7 +67,7 @@ struct Material
 {
 	glm::vec3 color;
 	float ambientK, diffuseK, specularK; // (0-1 range)
-	float shininess; // (0-512 range)
+	float shininess = 1; // (1-512 range)
 };
 
 Light _Light;
@@ -232,7 +232,7 @@ int main() {
 		ImGui::DragFloat("Ambient", &_Material.ambientK, 0.01, 0, 1);
 		ImGui::DragFloat("Diffuse", &_Material.diffuseK, 0.01, 0, 1);
 		ImGui::DragFloat("Specular", &_Material.specularK, 0.01, 0, 1);
-		ImGui::DragFloat("Shininess", &_Material.shininess, 1, 0, 512);
+		ImGui::DragFloat("Shininess", &_Material.shininess, 1, 1, 512);
 		ImGui::End();
 
 		ImGui::Render();

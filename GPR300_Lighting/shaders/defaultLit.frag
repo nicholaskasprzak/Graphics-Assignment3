@@ -119,5 +119,5 @@ void main(){
     vec3 lightCol = calcPhong(vertexOutput, _Material, _Light, _CameraPosition);
 
     vec3 normal = normalize(vertexOutput.worldNormal);
-    FragColor = vec4(lightCol * abs(normal), 1.0f);
+    FragColor = vec4(lightCol * _Material.color, 1.0f);
 }
