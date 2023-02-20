@@ -63,6 +63,34 @@ struct Light
 	float intensity;
 };
 
+struct DirectionalLight
+{
+	glm::vec3 direction;
+	float intensity;
+	glm::vec3 color;
+	Light light;
+};
+
+struct PointLight
+{
+	glm::vec3 position;
+	Light light;
+
+	float constK, linearK, quadraticK;
+};
+
+struct SpotLight
+{
+	glm::vec3 position;
+	glm::vec3 direction;
+	Light light;
+
+	float range;
+	float innerAngle;
+	float outerAngle;
+	float angleFalloff;
+};
+
 struct Material
 {
 	glm::vec3 color;
@@ -70,7 +98,9 @@ struct Material
 	float shininess = 1; // (1-512 range)
 };
 
-Light _Light;
+DirectionalLight _DirectionalLight;
+PointLight _PointLight;
+SpotLight _SpotLight;
 Material _Material;
 
 int main() {
@@ -172,12 +202,25 @@ int main() {
 		litShader.use();
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
-		litShader.setVec3("_LightPos", lightTransform.position);
 
-
+		/*
 		litShader.setVec3("_Light.position", _Light.position);
 		litShader.setVec3("_Light.color", _Light.color);
 		litShader.setFloat("_Light.intensity", _Light.intensity);
+		*/
+
+		litShader.setVec3("_DirectionalLight.direction", _DirectionalLight.direction);
+		litShader.setFloat("_DirectionalLight.light.intensity", _DirectionalLight.light.intensity);
+		litShader.setVec3("_DirectionalLight.light.color", _DirectionalLight.light.color);
+
+		litShader.setVec3("_SpotLight.position", _SpotLight.position);
+		litShader.setVec3("_SpotLight.direction", _SpotLight.direction);
+		litShader.setFloat("_SpotLight.light.intensity", _SpotLight.light.intensity);
+		litShader.setVec3("_SpotLight.light.color", _SpotLight.light.color);
+		litShader.setFloat("_SpotLight.range", _SpotLight.range);
+		litShader.setFloat("_SpotLight.innerAngle", _SpotLight.innerAngle);
+		litShader.setFloat("_SpotLight.outerAngle", _SpotLight.outerAngle);
+		litShader.setFloat("_SpotLight.angleFalloff", _SpotLight.angleFalloff);
 
 		litShader.setVec3("_Material.color", _Material.color);
 		litShader.setFloat("_Material.ambientK", _Material.ambientK);
@@ -208,9 +251,11 @@ int main() {
 		unlitShader.use();
 		unlitShader.setMat4("_Projection", camera.getProjectionMatrix());
 		unlitShader.setMat4("_View", camera.getViewMatrix());
-		unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
-		unlitShader.setVec3("_Color", lightColor);
-		sphereMesh.draw();
+
+		//lightTransform.position = _Light.position;
+		//unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
+		//unlitShader.setVec3("_Color", _Light.color);
+		//sphereMesh.draw();
 
 		//Draw UI
 		//ImGui::Begin("Settings");
@@ -219,11 +264,30 @@ int main() {
 		//ImGui::DragFloat3("Light Position", &lightTransform.position.x);
 		//ImGui::End();
 
-		ImGui::Begin("Light");
+		//ImGui::Begin("Light");
 
-		ImGui::ColorEdit3("Light Color", &_Light.color.r);
-		ImGui::DragFloat3("Light Position", &_Light.position.x);
-		ImGui::DragFloat("Light Intensity", &_Light.intensity, 0.01, 0, 1);
+		//ImGui::ColorEdit3("Light Color", &_Light.color.r);
+		//ImGui::DragFloat3("Light Position", &_Light.position.x);
+		//ImGui::DragFloat("Light Intensity", &_Light.intensity, 0.01, 0, 1);
+		//ImGui::End();
+
+		ImGui::Begin("Directional Light");
+
+		ImGui::DragFloat3("Direction", &_DirectionalLight.direction.x, 1, 0, 360);
+		ImGui::DragFloat("Intensity", &_DirectionalLight.light.intensity, 0.01, 0, 1);
+		ImGui::ColorEdit3("Color", &_DirectionalLight.light.color.r);
+		ImGui::End();
+
+		ImGui::Begin("Spot Light");
+
+		ImGui::DragFloat3("Position", &_SpotLight.position.x);
+		ImGui::DragFloat3("Direction", &_SpotLight.direction.x, 1, 0, 360);
+		ImGui::DragFloat("Intensity", &_SpotLight.light.intensity, 0.01, 0, 1);
+		ImGui::ColorEdit3("Color", &_SpotLight.light.color.r);
+		ImGui::DragFloat("Range", &_SpotLight.range, 1, 0, 100);
+		ImGui::DragFloat("Inner Angle", &_SpotLight.innerAngle, 1, 0, 360);
+		ImGui::DragFloat("Outer Angle", &_SpotLight.outerAngle, 1, 0, 360);
+		ImGui::DragFloat("Angle Falloff", &_SpotLight.angleFalloff, 1, 0, 360);
 		ImGui::End();
 
 		ImGui::Begin("Material");

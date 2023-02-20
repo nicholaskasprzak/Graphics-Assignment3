@@ -24,16 +24,45 @@ struct Material
 };
 
 /*
-* Struct to manage light data
+* Structs to manage light data
 */
 struct Light
 {
-    vec3 position;
     vec3 color;
     float intensity;
 };
 
-uniform Light _Light;
+struct DirectionalLight
+{
+    vec3 direction;
+    Light light;
+};
+
+struct PointLight
+{
+    vec3 position;
+    Light light;
+
+    float constK, linearK, quadraticK;
+};
+
+struct SpotLight
+{
+    vec3 position;
+    vec3 direction;
+    Light light;
+
+    float range;
+    float innerAngle;
+    float outerAngle;
+    float angleFalloff;
+};
+
+const int MAX_LIGHTS = 8;
+
+uniform DirectionalLight _DirectionalLight;
+uniform PointLight[MAX_LIGHTS] _PointLights;
+uniform SpotLight _SpotLight;
 uniform Material _Material;
 uniform vec3 _CameraPosition;
 
@@ -46,11 +75,11 @@ uniform vec3 _CameraPosition;
 * coefficient to get the surface's reflection
 * of the light.
 */
-vec3 calcAmbient(float ambientCoefficient, vec3 light)
+float calcAmbient(float ambientCoefficient)
 {
-    vec3 ambientRet;
+    float ambientRet;
 
-    ambientRet = ambientCoefficient * light;
+    ambientRet = ambientCoefficient;
 
     return ambientRet;
 }
@@ -66,15 +95,15 @@ vec3 calcAmbient(float ambientCoefficient, vec3 light)
 * of needing the cosine angle for the cosine
 * law.
 */
-vec3 calcDiffuse(float diffuseCoefficient, vec3 lightPosition, vec3 vertexPosition, vec3 vertexNormal, vec3 light)
+float calcDiffuse(float diffuseCoefficient, vec3 lightDirection, vec3 vertexNormal)
 {
-    vec3 diffuseRet;
+    float diffuseRet;
 
-    vec3 dirToVert = lightPosition - vertexPosition;
-    float cosAngle = dot(normalize(dirToVert), normalize(vertexNormal));
+    //vec3 dirToVert = lightPosition - vertexPosition;
+    float cosAngle = dot(normalize(lightDirection), normalize(vertexNormal));
     cosAngle = clamp(cosAngle, 0, cosAngle);
 
-    diffuseRet = diffuseCoefficient * cosAngle * light;
+    diffuseRet = diffuseCoefficient * cosAngle;
 
     return diffuseRet;
 };
@@ -84,39 +113,69 @@ vec3 calcDiffuse(float diffuseCoefficient, vec3 lightPosition, vec3 vertexPositi
 *
 * 
 */
-vec3 calcSpecular(float specularCoefficient, vec3 lightPosition, vec3 vertexPosition, vec3 vertexNormal, float shininess, vec3 light, vec3 cameraPosition)
+float calcSpecular(float specularCoefficient, vec3 lightDirection, vec3 vertexPosition, vec3 vertexNormal, float shininess, vec3 cameraPosition)
 {
-    vec3 specularRet;
+    float specularRet;
 
-    vec3 lightDir = lightPosition - vertexPosition;
-    vec3 reflectDir = reflect(-lightDir, vertexNormal);
+    vec3 reflectDir = reflect(-lightDirection, vertexNormal);
     vec3 cameraDir = cameraPosition - vertexPosition;
     float cosAngle = dot(normalize(reflectDir), normalize(cameraDir));
     cosAngle = clamp(cosAngle, 0, cosAngle);
 
-    specularRet = specularCoefficient * pow(cosAngle, shininess) * light;
+    specularRet = specularCoefficient * pow(cosAngle, shininess);
 
     return specularRet;
 };
 
-vec3 calcPhong(Vertex vertex, Material material, Light light, vec3 cameraPosition)
+vec3 calcPhong(Vertex vertex, Material material, Light light, vec3 lightDirection, vec3 cameraPosition)
 {
     vec3 phongRet;
 
     vec3 lightColor = light.intensity * light.color;
 
-    vec3 ambient = calcAmbient(material.ambientK, lightColor);
-    vec3 diffuse = calcDiffuse(material.diffuseK, light.position, vertex.worldPosition, vertex.worldNormal, lightColor);
-    vec3 specular = calcSpecular(material.specularK, light.position, vertex.worldPosition, vertex.worldNormal, material.shininess, lightColor, cameraPosition);
+    float ambient = calcAmbient(material.ambientK);
+    float diffuse = calcDiffuse(material.diffuseK, lightDirection, vertex.worldNormal);
+    float specular = calcSpecular(material.specularK, lightDirection, vertex.worldPosition, vertex.worldNormal, material.shininess, cameraPosition);
 
-    phongRet = ambient + diffuse + specular;
+    phongRet = (ambient + diffuse + specular) * lightColor;
 
     return phongRet;
 }
 
+float calcGLAttenuation(PointLight light, vec3 vertPos)
+{
+    float attenuation;
+    float dist = distance(light.position, vertPos);
+
+    attenuation = 1 / (light.constK + light.linearK + (light.quadraticK * dist));
+
+    return attenuation;
+}
+
+float calcAngularAttenuation(SpotLight light, vec3 vertPos)
+{
+    float attenuation;
+    vec3 dist = (light.position - vertPos) / normalize(light.position - vertPos);
+    float cosAngle = dot(light.direction, dist);
+
+    attenuation = pow((cosAngle - light.outerAngle) / (light.innerAngle - light.outerAngle), light.angleFalloff);
+
+    return attenuation;
+}
+
 void main(){    
 
-    vec3 lightCol = calcPhong(vertexOutput, _Material, _Light, _CameraPosition);
+    vec3 lightCol;
+
+    lightCol += calcPhong(vertexOutput, _Material, _DirectionalLight.light, _DirectionalLight.direction, _CameraPosition);
+
+    // Point Lights
+    for (int i = 0; i < MAX_LIGHTS; i++)
+    {
+        //lightCol += calcPhong(vertexOutput, _Material, _PointLights[i].light, _PointLights[i].position - vertexOutput.worldPosition, _CameraPosition) * calcGLAttenuation(_PointLights[i], vertexOutput.worldPosition);
+    }
+
+    lightCol += calcPhong(vertexOutput, _Material, _SpotLight.light, _SpotLight.position - vertexOutput.worldPosition, _CameraPosition) * calcAngularAttenuation(_SpotLight, vertexOutput.worldPosition);
 
     vec3 normal = normalize(vertexOutput.worldNormal);
     FragColor = vec4(lightCol * _Material.color, 1.0f);
