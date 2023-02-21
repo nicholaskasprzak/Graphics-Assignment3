@@ -59,6 +59,7 @@ struct SpotLight
 };
 
 const int MAX_LIGHTS = 8;
+uniform int lightCount;
 
 uniform DirectionalLight _DirectionalLight;
 uniform PointLight[MAX_LIGHTS] _PointLights;
@@ -170,9 +171,9 @@ void main(){
     lightCol += calcPhong(vertexOutput, _Material, _DirectionalLight.light, _DirectionalLight.direction, _CameraPosition);
 
     // Point Lights
-    for (int i = 0; i < MAX_LIGHTS; i++)
+    for (int i = 0; i < lightCount; i++)
     {
-        //lightCol += calcPhong(vertexOutput, _Material, _PointLights[i].light, _PointLights[i].position - vertexOutput.worldPosition, _CameraPosition) * calcGLAttenuation(_PointLights[i], vertexOutput.worldPosition);
+        lightCol += calcPhong(vertexOutput, _Material, _PointLights[i].light, _PointLights[i].position - vertexOutput.worldPosition, _CameraPosition)  * calcGLAttenuation(_PointLights[i], vertexOutput.worldPosition);
     }
 
     lightCol += calcPhong(vertexOutput, _Material, _SpotLight.light, _SpotLight.position - vertexOutput.worldPosition, _CameraPosition) * calcAngularAttenuation(_SpotLight, vertexOutput.worldPosition);

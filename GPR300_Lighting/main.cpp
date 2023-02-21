@@ -66,8 +66,6 @@ struct Light
 struct DirectionalLight
 {
 	glm::vec3 direction;
-	float intensity;
-	glm::vec3 color;
 	Light light;
 };
 
@@ -97,6 +95,11 @@ struct Material
 	float ambientK, diffuseK, specularK; // (0-1 range)
 	float shininess = 1; // (1-512 range)
 };
+
+int numPointLights = 0;
+glm::vec3 pointLightOrbitCenter;
+float pointLightOrbitRange;
+float pointLightOrbitSpeed;
 
 DirectionalLight _DirectionalLight;
 PointLight _PointLight;
@@ -198,20 +201,55 @@ int main() {
 		deltaTime = time - lastFrameTime;
 		lastFrameTime = time;
 
-		//Draw
 		litShader.use();
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 
-		/*
-		litShader.setVec3("_Light.position", _Light.position);
-		litShader.setVec3("_Light.color", _Light.color);
-		litShader.setFloat("_Light.intensity", _Light.intensity);
-		*/
-
 		litShader.setVec3("_DirectionalLight.direction", _DirectionalLight.direction);
 		litShader.setFloat("_DirectionalLight.light.intensity", _DirectionalLight.light.intensity);
 		litShader.setVec3("_DirectionalLight.light.color", _DirectionalLight.light.color);
+		
+		for (int i = 0; i < numPointLights; i++)
+		{
+			float angle = (360 / numPointLights) * i;
+			angle = glm::radians(angle);
+			glm::vec3 lightPosition = glm::vec3(cos(angle + (time * pointLightOrbitSpeed)) * pointLightOrbitRange, 0, sin(angle + (time * pointLightOrbitSpeed)) * pointLightOrbitRange);
+			lightPosition += pointLightOrbitCenter;
+
+			glm::vec3 color;
+			if ((i + 1) % 3 == 0)
+			{
+				color = glm::vec3(1, 0, 0);
+			}
+
+			else if ((i + 1) % 2 == 0)
+			{
+				color = glm::vec3(0, 1, 0);
+			}
+
+			else
+			{
+				color = glm::vec3(0, 0, 1);
+			}
+
+			litShader.setVec3("_PointLights[" + std::to_string(i) + "].position", lightPosition);
+			litShader.setVec3("_PointLights[" + std::to_string(i) + "].light.color", color);
+			litShader.setFloat("_PointLights[" + std::to_string(i) + "].light.intensity", _PointLight.light.intensity);
+			litShader.setFloat("_PointLights[" + std::to_string(i) + "].constK", _PointLight.constK);
+			litShader.setFloat("_PointLights[" + std::to_string(i) + "].linearK", _PointLight.linearK);
+			litShader.setFloat("_PointLights[" + std::to_string(i) + "].quadraticK", _PointLight.quadraticK);
+
+			unlitShader.use();
+			unlitShader.setMat4("_Projection", camera.getProjectionMatrix());
+			unlitShader.setMat4("_View", camera.getViewMatrix());
+
+			lightTransform.position = lightPosition;
+			unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
+			unlitShader.setVec3("_Color", color);
+			sphereMesh.draw();
+		}
+		litShader.use();
+		litShader.setInt("lightCount", numPointLights);
 
 		litShader.setVec3("_SpotLight.position", _SpotLight.position);
 		litShader.setVec3("_SpotLight.direction", _SpotLight.direction);
@@ -230,7 +268,6 @@ int main() {
 
 		litShader.setVec3("_CameraPosition", camera.getPosition());
 
-
 		//Draw cube
 		litShader.setMat4("_Model", cubeTransform.getModelMatrix());
 		cubeMesh.draw();
@@ -247,35 +284,24 @@ int main() {
 		litShader.setMat4("_Model", planeTransform.getModelMatrix());
 		planeMesh.draw();
 
-		//Draw light as a small sphere using unlit shader, ironically.
-		unlitShader.use();
-		unlitShader.setMat4("_Projection", camera.getProjectionMatrix());
-		unlitShader.setMat4("_View", camera.getViewMatrix());
-
-		//lightTransform.position = _Light.position;
-		//unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
-		//unlitShader.setVec3("_Color", _Light.color);
-		//sphereMesh.draw();
-
 		//Draw UI
-		//ImGui::Begin("Settings");
-
-		//ImGui::ColorEdit3("Light Color", &lightColor.r);
-		//ImGui::DragFloat3("Light Position", &lightTransform.position.x);
-		//ImGui::End();
-
-		//ImGui::Begin("Light");
-
-		//ImGui::ColorEdit3("Light Color", &_Light.color.r);
-		//ImGui::DragFloat3("Light Position", &_Light.position.x);
-		//ImGui::DragFloat("Light Intensity", &_Light.intensity, 0.01, 0, 1);
-		//ImGui::End();
 
 		ImGui::Begin("Directional Light");
 
 		ImGui::DragFloat3("Direction", &_DirectionalLight.direction.x, 1, 0, 360);
 		ImGui::DragFloat("Intensity", &_DirectionalLight.light.intensity, 0.01, 0, 1);
 		ImGui::ColorEdit3("Color", &_DirectionalLight.light.color.r);
+		ImGui::End();
+
+		ImGui::Begin("Point Light");
+		ImGui::DragInt("Number of Lights", &numPointLights, 1, 0, 8);
+		ImGui::DragFloat("Intensity", &_PointLight.light.intensity, 0.01, 0, 1);
+		ImGui::DragFloat("Constant Coefficient", &_PointLight.constK, 0.01, 0, 1);
+		ImGui::DragFloat("Linear Coefficient", &_PointLight.linearK, 0.01, 0, 1);
+		ImGui::DragFloat("Quadratic Coefficient", &_PointLight.quadraticK, 0.01, 0, 1);
+		ImGui::DragFloat3("Orbit Center", &pointLightOrbitCenter.x);
+		ImGui::DragFloat("Orbit Radius", &pointLightOrbitRange);
+		ImGui::DragFloat("Orbit Speed", &pointLightOrbitSpeed);
 		ImGui::End();
 
 		ImGui::Begin("Spot Light");
