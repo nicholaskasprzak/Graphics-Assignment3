@@ -100,7 +100,6 @@ float calcDiffuse(float diffuseCoefficient, vec3 lightDirection, vec3 vertexNorm
 {
     float diffuseRet;
 
-    //vec3 dirToVert = lightPosition - vertexPosition;
     float cosAngle = dot(normalize(lightDirection), normalize(vertexNormal));
     cosAngle = clamp(cosAngle, 0, cosAngle);
 
@@ -149,6 +148,7 @@ float calcGLAttenuation(PointLight light, vec3 vertPos)
     float dist = distance(light.position, vertPos);
 
     attenuation = 1 / (light.constK + light.linearK + (light.quadraticK * dist));
+    //attenuation = clamp(attenuation, 0, attenuation);
 
     return attenuation;
 }
@@ -156,10 +156,16 @@ float calcGLAttenuation(PointLight light, vec3 vertPos)
 float calcAngularAttenuation(SpotLight light, vec3 vertPos)
 {
     float attenuation;
-    vec3 dist = (light.position - vertPos) / normalize(light.position - vertPos);
-    float cosAngle = dot(light.direction, dist);
 
-    attenuation = pow((cosAngle - light.outerAngle) / (light.innerAngle - light.outerAngle), light.angleFalloff);
+    vec3 dir = (vertPos - light.position) / length(vertPos - light.position);
+    float cosAngle = dot(dir, normalize(-light.direction));
+
+    float maxAngle = cos(radians(light.outerAngle));
+    float minAngle = cos(radians(light.innerAngle));
+
+    attenuation = (cosAngle - maxAngle) / (minAngle - maxAngle);
+    attenuation = pow(attenuation, light.angleFalloff);
+    attenuation = clamp(attenuation, 0, 1);
 
     return attenuation;
 }
@@ -173,7 +179,7 @@ void main(){
     // Point Lights
     for (int i = 0; i < lightCount; i++)
     {
-        lightCol += calcPhong(vertexOutput, _Material, _PointLights[i].light, _PointLights[i].position - vertexOutput.worldPosition, _CameraPosition)  * calcGLAttenuation(_PointLights[i], vertexOutput.worldPosition);
+        lightCol += calcPhong(vertexOutput, _Material, _PointLights[i].light, _PointLights[i].position - vertexOutput.worldPosition, _CameraPosition) * calcGLAttenuation(_PointLights[i], vertexOutput.worldPosition);
     }
 
     lightCol += calcPhong(vertexOutput, _Material, _SpotLight.light, _SpotLight.position - vertexOutput.worldPosition, _CameraPosition) * calcAngularAttenuation(_SpotLight, vertexOutput.worldPosition);

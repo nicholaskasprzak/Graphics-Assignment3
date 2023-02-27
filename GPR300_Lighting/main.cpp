@@ -251,6 +251,7 @@ int main() {
 		litShader.use();
 		litShader.setInt("lightCount", numPointLights);
 
+
 		litShader.setVec3("_SpotLight.position", _SpotLight.position);
 		litShader.setVec3("_SpotLight.direction", _SpotLight.direction);
 		litShader.setFloat("_SpotLight.light.intensity", _SpotLight.light.intensity);
@@ -307,13 +308,13 @@ int main() {
 		ImGui::Begin("Spot Light");
 
 		ImGui::DragFloat3("Position", &_SpotLight.position.x);
-		ImGui::DragFloat3("Direction", &_SpotLight.direction.x, 1, 0, 360);
+		ImGui::DragFloat3("Direction", &_SpotLight.direction.x, 0.01, -1, 1);
 		ImGui::DragFloat("Intensity", &_SpotLight.light.intensity, 0.01, 0, 1);
 		ImGui::ColorEdit3("Color", &_SpotLight.light.color.r);
-		ImGui::DragFloat("Range", &_SpotLight.range, 1, 0, 100);
-		ImGui::DragFloat("Inner Angle", &_SpotLight.innerAngle, 1, 0, 360);
-		ImGui::DragFloat("Outer Angle", &_SpotLight.outerAngle, 1, 0, 360);
-		ImGui::DragFloat("Angle Falloff", &_SpotLight.angleFalloff, 1, 0, 360);
+		ImGui::DragFloat("Range", &_SpotLight.range, 1, 0, 30);
+		ImGui::DragFloat("Inner Angle", &_SpotLight.innerAngle, 1, 0, 180);
+		ImGui::DragFloat("Outer Angle", &_SpotLight.outerAngle, 1, 0, 180);
+		ImGui::DragFloat("Angle Falloff", &_SpotLight.angleFalloff, 0.01, 0, 5);
 		ImGui::End();
 
 		ImGui::Begin("Material");

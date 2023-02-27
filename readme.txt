@@ -1,0 +1,1 @@
+The attenuation formula I used was GL falloff. The reasoning behind this decision was because it allows for the use of both linear and exponential falloff in light calculation.
